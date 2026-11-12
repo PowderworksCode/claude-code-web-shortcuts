@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "claude-code-web-shortcuts",
+  "version": "0.1.0",
+  "description": "One-click (and keychord) canned replies next to the Claude Code web composer. Configurable; submits immediately.",
+  "permissions": ["storage"],
+  "content_scripts": [
+    {
+      "matches": ["https://claude.ai/*"],
+      "js": ["defaults.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "action": {
+    "default_title": "claude-code-web-shortcuts settings"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "scripts": ["background.js"]
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "claude-code-web-shortcuts@powderworks.dev",
+      "strict_min_version": "121.0"
+    }
+  }
+}

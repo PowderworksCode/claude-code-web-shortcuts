@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Claude Code Web Shortcuts</title>
+  <style>
+    :root {
+      --bg: #ffffff; --panel: #ffffff; --head: #f3f3f3; --fg: #202124; --fg2: #5f6368;
+      --line: #dadce0; --input: #ffffff; --input-line: #b8bbbf; --accent: #1a73e8; --danger: #c5221f;
+      --hover: #f1f3f4; color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #202124; --panel: #292a2d; --head: #35363a; --fg: #e8eaed; --fg2: #9aa0a6;
+        --line: #3c4043; --input: #202124; --input-line: #5f6368; --accent: #8ab4f8; --danger: #f28b82;
+        --hover: #35363a; color-scheme: dark;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg); font: 13px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; accent-color: var(--accent); }
+    main { max-width: 760px; margin: 0 auto; padding: 32px 20px 64px; }
+
+    header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+      padding-bottom: 12px; margin-bottom: 24px; border-bottom: 1px solid var(--line); }
+    h1 { font-size: 18px; font-weight: 600; margin: 0; }
+    .lede { color: var(--fg2); margin: 4px 0 0; }
+    .gh { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); text-decoration: none; white-space: nowrap; }
+    .links { display: flex; gap: 16px; }
+    .gh:hover { text-decoration: underline; }
+    .gh svg { width: 14px; height: 14px; color: var(--fg); }
+
+    h2 { font-size: 14px; font-weight: 600; margin: 0 0 8px; }
+    section { margin-bottom: 28px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; }
+
+    /* button table */
+    .cols, .item { display: grid; grid-template-columns: 44px 120px 1fr 160px 28px; gap: 8px; align-items: center; }
+    .cols { padding: 6px 10px; font-weight: 600; color: var(--fg2); background: var(--head); border-bottom: 1px solid var(--line); border-radius: 4px 4px 0 0; }
+    .item { padding: 6px 10px; border-bottom: 1px solid var(--line); }
+    .item:last-child { border-bottom: 0; }
+    .item.dup .shortcut { border-color: var(--danger); color: var(--danger); }
+    input[type=text] { font: inherit; color: var(--fg); background: var(--input); border: 1px solid var(--input-line);
+      border-radius: 3px; padding: 4px 6px; width: 100%; min-width: 0; }
+    input[type=text]:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
+    input::placeholder { color: var(--fg2); opacity: .7; }
+
+    .handle { display: flex; gap: 2px; }
+    .icon { appearance: none; border: 1px solid transparent; background: transparent; color: var(--fg2); cursor: pointer;
+      padding: 0; display: grid; place-items: center; border-radius: 3px; width: 20px; height: 22px; }
+    .icon:hover { color: var(--fg); background: var(--hover); border-color: var(--line); }
+    .icon:disabled { opacity: .3; cursor: default; background: none; border-color: transparent; }
+    .icon svg { width: 14px; height: 14px; }
+    .remove { width: 26px; height: 26px; }
+    .remove:hover { color: var(--danger); }
+
+    .shortcut { font: inherit; cursor: pointer; display: flex; gap: 3px; align-items: center; flex-wrap: wrap;
+      min-height: 26px; padding: 2px 6px; border-radius: 3px; border: 1px solid var(--input-line); background: var(--input); color: var(--fg); text-align: left; }
+    .shortcut:hover { background: var(--hover); }
+    .shortcut.rec { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: -1px; color: var(--fg2); }
+    .shortcut .then { color: var(--fg2); font-size: 11px; margin: 0 2px; }
+    kbd { font: 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--fg); background: var(--head);
+      border: 1px solid var(--line); border-radius: 3px; padding: 2px 4px; min-width: 18px; text-align: center; }
+    .none { color: var(--fg2); }
+
+    .add { font: inherit; color: var(--fg); background: var(--head); border: 1px solid var(--input-line); border-radius: 3px;
+      padding: 4px 12px; margin: 8px 10px 10px; cursor: pointer; }
+    .add:hover { background: var(--hover); }
+    .hint { color: var(--fg2); margin: 6px 0 0; }
+    .hint kbd { font-size: 10px; padding: 1px 3px; }
+
+    /* settings */
+    .setting { display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+    .setting:last-child { border-bottom: 0; }
+    .setting .t { font-weight: 500; }
+    .setting .d { color: var(--fg2); }
+    .setting input[type=text] { max-width: 260px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+    select { font: inherit; color: var(--fg); background: var(--input); border: 1px solid var(--input-line); border-radius: 3px; padding: 3px 6px; }
+    .setting input[type=checkbox] { width: 16px; height: 16px; margin: 0; flex: none; }
+    label.setting { cursor: pointer; }
+
+    details summary { cursor: pointer; font-size: 14px; font-weight: 600; margin: 0 0 8px; }
+
+    footer { display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid var(--line); color: var(--fg2); }
+    .link { font: inherit; color: var(--fg); background: var(--head); border: 1px solid var(--input-line); border-radius: 3px; padding: 4px 12px; cursor: pointer; }
+    .link:hover { background: var(--hover); }
+    #status.on { color: var(--fg); }
+
+    @media (max-width: 640px) {
+      header { flex-direction: column; }
+      .cols { display: none; }
+      .item { grid-template-columns: 1fr 28px; grid-template-areas: "l r" "m r" "s r" "h r"; row-gap: 4px; }
+      .handle { grid-area: h; } .label { grid-area: l; } .message { grid-area: m; } .shortcut { grid-area: s; } .remove { grid-area: r; }
+      .setting { flex-direction: column; align-items: stretch; gap: 6px; }
+      .setting input[type=text] { max-width: none; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Claude Code Web Shortcuts</h1>
+      <p class="lede">Quick replies above the Claude Code composer. Click one, or press its shortcut, to replace what's in the box and send it.</p>
+    </div>
+    <div class="links">
+    <a class="gh" href="https://github.com/PowderworksCode/claude-code-web-shortcuts" target="_blank" rel="noopener">
+      <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+    <a class="gh" href="https://powderworks.dev" target="_blank" rel="noopener">Powderworks</a>
+    </div>
+  </header>
+
+  <section>
+    <h2>Buttons</h2>
+    <div class="card">
+      <div class="cols"><span>Order</span><span>Label</span><span>Message</span><span>Shortcut</span><span></span></div>
+      <div id="rows"></div>
+      <button class="add" id="add">+ Add button</button>
+    </div>
+    <p class="hint">Click a shortcut to record it. Two steps make a chord: press <kbd>⌃</kbd><kbd>K</kbd> then <kbd>Y</kbd>. <kbd>Esc</kbd> cancels, <kbd>⌫</kbd> clears.</p>
+  </section>
+
+  <section>
+    <h2>Behavior</h2>
+    <div class="card">
+      <label class="setting">
+        <div><div class="t">Send immediately</div><div class="d">When off, buttons only fill in the composer.</div></div>
+        <input type="checkbox" id="autoSubmit">
+      </label>
+      <div class="setting">
+        <div><div class="t">Position</div><div class="d">Where the buttons sit relative to the message box.</div></div>
+        <select id="placement">
+          <option value="below">Below, beside the model picker</option>
+          <option value="above">Above the message box</option>
+        </select>
+      </div>
+      <div class="setting">
+        <div><div class="t">Active on paths starting with</div><div class="d">claude.ai pages outside this prefix are left alone.</div></div>
+        <input type="text" id="pathPrefix" placeholder="/code">
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <details>
+      <summary>Advanced</summary>
+      <div class="card">
+        <div class="setting">
+          <div><div class="t">Composer selector</div><div class="d">Blank: the bottom-most editable box.</div></div>
+          <input type="text" id="composerSelector" placeholder="auto">
+        </div>
+        <div class="setting">
+          <div><div class="t">Send button selector</div><div class="d">Blank: the nearest send/submit button.</div></div>
+          <input type="text" id="sendSelector" placeholder="auto">
+        </div>
+        <div class="setting">
+          <div><div class="t">Row below the box</div><div class="d">Used with "Below". Blank: the row under the input box.</div></div>
+          <input type="text" id="footerSelector" placeholder="auto">
+        </div>
+        <div class="setting">
+          <div><div class="t">Place bar above</div><div class="d">Used with "Above". Blank: the input box's outer container.</div></div>
+          <input type="text" id="anchorSelector" placeholder="auto">
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <footer>
+    <span id="status">Changes save automatically.</span>
+    <button class="link" id="reset">Reset to defaults</button>
+  </footer>
+</main>
+<script src="defaults.js"></script>
+<script src="options.js"></script>
+</body>
+</html>
