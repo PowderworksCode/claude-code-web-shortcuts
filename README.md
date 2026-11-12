@@ -4,12 +4,7 @@ A Chrome/Firefox extension that adds one-click quick replies to Claude Code on t
 
 The buttons sit under the message box, on the same line as the model picker:
 
-```
-╭──────────────────────────────────────────────────────────────────────╮
-│ +                                                                 🎤 │
-╰──────────────────────────────────────────────────────────────────────╯
- ⚙  (yes ⌃⌥Y) (no ⌃⌥N) (pull ⌃⌥P) (replan ⌃⌥R) (do all ⌃⌥D)     Opus · Auto
-```
+![Buttons under the Claude Code message box, beside the model picker](docs/screenshot.png)
 
 Clicking a button, or pressing its keychord, replaces whatever is in the message box with that button's message and sends it immediately. The buttons pick up the page's font and colors, so they match light and dark mode.
 
