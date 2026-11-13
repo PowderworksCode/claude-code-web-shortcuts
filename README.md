@@ -16,6 +16,7 @@ Clicking a button, or pressing its keychord, replaces whatever is in the message
 | no | No, stop | Ctrl+Alt+N |
 | pull | Pull and rebase everything on main | Ctrl+Alt+P |
 | replan | Replan | Ctrl+Alt+R |
+| explain | Explain that last part | Ctrl+Alt+E |
 | do all | Do everything you just suggested | Ctrl+Alt+D |
 
 On macOS, Ctrl+Alt is ⌃⌥. Shortcuts match the physical key, so ⌥+letter works even though macOS would normally type a special character.

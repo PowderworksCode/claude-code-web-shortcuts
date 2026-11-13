@@ -21,6 +21,7 @@ var CCWS_DEFAULTS = {
       shortcut: "Ctrl+Alt+P",
     },
     { label: "replan", message: "Replan", shortcut: "Ctrl+Alt+R" },
+    { label: "explain", message: "Explain that last part", shortcut: "Ctrl+Alt+E" },
     {
       label: "do all",
       message: "Do everything you just suggested",
