@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] - 2026-11-13
+
+### Changed
+
+- Version bumped from 0.0.1 so it's higher than 0.1.0, which addons.mozilla.org had already registered. No code changes.
+
 ## [0.0.1] - 2026-11-13
 
 First release.
@@ -36,4 +42,5 @@ First release.
 - **Browsers:** Chrome and Firefox (140+) from one MV3 manifest. Declares no data collection.
 - **Docs:** MIT license and privacy policy.
 
+[0.1.1]: https://github.com/PowderworksCode/claude-code-web-shortcuts/releases/tag/v0.1.1
 [0.0.1]: https://github.com/PowderworksCode/claude-code-web-shortcuts/releases/tag/v0.0.1
