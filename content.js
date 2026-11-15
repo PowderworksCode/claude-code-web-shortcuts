@@ -275,6 +275,8 @@
     :host(.inline) { margin: 0 auto 0 8px; align-self: center; flex: none; }
     :host(.inline.first) { margin-left: 0; }
     :host(.inline) .bar { flex-wrap: nowrap; }
+    :host(.compact) .bar { gap: 4px; }
+    :host(.compact) button:not(.gear) { padding-left: 9px; padding-right: 9px; }
     :host(.row) { margin: 8px 0 0; }
   `;
 
@@ -335,11 +337,19 @@
     }
 
     // Width the buttons need on one line (independent of where we are).
-    naturalWidth() {
+    // Widths the bar needs on one line, in normal and compact spacing.
+    // Derived from the current layout either way, so measuring never needs
+    // a class toggle (which would itself cause a reflow / flicker).
+    widths() {
       const kids = [...this.host.shadowRoot.querySelector(".bar").children].filter(
         (k) => !k.classList.contains("toast")
       );
-      return kids.reduce((w, k) => w + k.getBoundingClientRect().width, 0) + 6 * (kids.length - 1);
+      const compact = this.host.classList.contains("compact");
+      const gap = compact ? 4 : 6;
+      const measured = kids.reduce((w, k) => w + k.getBoundingClientRect().width, 0) + gap * (kids.length - 1);
+      const buttons = kids.filter((k) => !k.classList.contains("gear")).length;
+      const saving = buttons * 6 + 2 * (kids.length - 1); // 3px less padding a side, 2px less gap
+      return compact ? { normal: measured + saving, compact: measured } : { normal: measured, compact: measured - saving };
     }
 
     adoptPageStyle(card) {
@@ -387,36 +397,50 @@
       // otherwise on their own line right under it. Both measurements ignore
       // our own host, so the decision is stable and doesn't oscillate.
       if (!h.isConnected) footer.parentElement.insertBefore(h, footer.nextSibling);
-      // Three layouts, picked from measurements that ignore our own bar, so
-      // the choice is stable:
-      //  1. fits: inline, after the left-side controls (e.g. + and mic) and
-      //     before the right-side ones (model picker), pushing those right.
-      //  2. doesn't fit but there's empty page to the left: inline as the
-      //     row's first item, extending left past the input box's edge.
-      //  3. neither: on its own line under the row.
-      const overshoot = this.naturalWidth() + 16 - freeSpace(footer);
+      // Layouts in order of preference, picked from measurements that ignore
+      // our own bar, so the choice is stable:
+      //  1. inline in the row, after the left-side controls (e.g. + and mic)
+      //     and before the right-side ones (model picker)
+      //  2. same, with tighter button padding
+      //  3. tight, as the row's first item, extending left past the input
+      //     box's edge into empty page
+      //  4. on its own line under the row
+      const free = freeSpace(footer) - 8;
+      const { normal, compact } = this.widths();
       const fb = footer.getBoundingClientRect();
+      const roomLeft = fb.left - 8;
       const others = [...footer.children].filter((k) => k !== h && !isOurs(k));
       const margin = (px) => {
         const v = px ? `${px}px` : "";
         if (h.style.marginLeft !== v) h.style.marginLeft = v;
       };
-      if (overshoot <= 0 || overshoot <= fb.left - 8) {
-        const mid = fb.left + fb.width / 2;
-        const ref =
-          overshoot <= 0 ? others.find((k) => k.getBoundingClientRect().left >= mid) || null : others[0] || null;
-        setClass(h, "row", false);
-        setClass(h, "inline", true);
-        setClass(h, "first", ref === others[0]);
-        margin(overshoot > 0 ? -Math.ceil(overshoot) : 0);
-        if (h.parentElement !== footer || h.nextElementSibling !== ref) footer.insertBefore(h, ref);
-      } else {
+      let mode;
+      if (normal <= free) mode = "fit";
+      else if (compact <= free) mode = "compact";
+      else if (compact - free <= roomLeft) mode = "extend";
+      else mode = "row";
+      if (mode !== this.mode) {
+        this.mode = mode;
+        console.debug("[claude-code-web-shortcuts] layout", { mode, free, normal, compact, roomLeft, footer });
+      }
+
+      setClass(h, "compact", mode === "compact" || mode === "extend");
+      if (mode === "row") {
         setClass(h, "inline", false);
         setClass(h, "first", false);
         setClass(h, "row", true);
         margin(0);
         if (h.previousElementSibling !== footer) footer.parentElement.insertBefore(h, footer.nextSibling);
+        return;
       }
+      const mid = fb.left + fb.width / 2;
+      const ref =
+        mode === "extend" ? others[0] || null : others.find((k) => k.getBoundingClientRect().left >= mid) || null;
+      setClass(h, "row", false);
+      setClass(h, "inline", true);
+      setClass(h, "first", ref === others[0]);
+      margin(mode === "extend" ? -Math.ceil(compact - free) : 0);
+      if (h.parentElement !== footer || h.nextElementSibling !== ref) footer.insertBefore(h, ref);
     }
 
     remove() {
@@ -424,12 +448,42 @@
     }
   }
 
+  // Horizontal extent of what's actually visible inside el (text, icons,
+  // controls), ignoring empty boxes that only stretch to fill space. Returns
+  // [left, right] or null when nothing is visible.
+  function visibleExtent(el, depth = 0) {
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) return null;
+    const cs = getComputedStyle(el);
+    if (cs.visibility === "hidden" || cs.opacity === "0") return null;
+    const solid =
+      /^(BUTTON|SVG|IMG|INPUT|SELECT|svg)$/.test(el.tagName) ||
+      alpha(cs.backgroundColor) > 0 ||
+      parseFloat(cs.borderLeftWidth) > 0;
+    const ownText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+    if (solid || ownText || depth > 6) return [r.left, r.right];
+    let ext = null;
+    for (const k of el.children) {
+      const e = visibleExtent(k, depth + 1);
+      if (e) ext = ext ? [Math.min(ext[0], e[0]), Math.max(ext[1], e[1])] : e;
+    }
+    return ext;
+  }
+
+  // Width in the row not taken by the page's own visible controls.
   function freeSpace(footer) {
     const cs = getComputedStyle(footer);
     const gap = parseFloat(cs.columnGap) || 0;
-    const others = [...footer.children].filter((k) => !isOurs(k) && k.getBoundingClientRect().width > 0);
-    const used = others.reduce((w, k) => w + k.getBoundingClientRect().width, 0) + gap * others.length;
-    return footer.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - used;
+    let used = 0;
+    let count = 0;
+    for (const k of footer.children) {
+      if (isOurs(k)) continue;
+      const e = visibleExtent(k);
+      if (!e) continue;
+      used += e[1] - e[0];
+      count++;
+    }
+    return footer.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - used - gap * count;
   }
 
   // ---------- placement loop ----------
