@@ -13,11 +13,13 @@ Clicking a button, or pressing its keychord, replaces whatever is in the message
 | Button | Sends | Shortcut |
 |---|---|---|
 | yes | Yes, continue | Ctrl+Alt+Y |
-| no | No, stop | Ctrl+Alt+N |
-| pull | Pull and rebase everything on main | Ctrl+Alt+P |
-| replan | Replan | Ctrl+Alt+R |
+| links | List of links to review | Ctrl+Alt+N |
+| rebase | Pull and rebase everything on main | Ctrl+Alt+P |
+| next? | What's next? | Ctrl+Alt+R |
 | explain | Explain that last part | Ctrl+Alt+E |
 | do all | Do everything you just suggested | Ctrl+Alt+D |
+| stack | Sounds good, stack pr's | Ctrl+Alt+K |
+| status? | status? | Ctrl+Alt+S |
 
 On macOS, Ctrl+Alt is ⌃⌥. Shortcuts match the physical key, so ⌥+letter works even though macOS would normally type a special character.
 
