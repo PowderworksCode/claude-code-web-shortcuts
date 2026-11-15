@@ -14,19 +14,13 @@ var CCWS_DEFAULTS = {
   anchorSelector: "",
   buttons: [
     { label: "yes", message: "Yes, continue", shortcut: "Ctrl+Alt+Y" },
-    { label: "no", message: "No, stop", shortcut: "Ctrl+Alt+N" },
-    {
-      label: "pull",
-      message: "Pull and rebase everything on main",
-      shortcut: "Ctrl+Alt+P",
-    },
-    { label: "replan", message: "Replan", shortcut: "Ctrl+Alt+R" },
+    { label: "links", message: "List of links to review", shortcut: "Ctrl+Alt+N" },
+    { label: "rebase", message: "Pull and rebase everything on main", shortcut: "Ctrl+Alt+P" },
+    { label: "next?", message: "What's next?", shortcut: "Ctrl+Alt+R" },
     { label: "explain", message: "Explain that last part", shortcut: "Ctrl+Alt+E" },
-    {
-      label: "do all",
-      message: "Do everything you just suggested",
-      shortcut: "Ctrl+Alt+D",
-    },
+    { label: "do all", message: "Do everything you just suggested", shortcut: "Ctrl+Alt+D" },
+    { label: "stack", message: "Sounds good, stack pr's", shortcut: "Ctrl+Alt+K" },
+    { label: "status?", message: "status?", shortcut: "Ctrl+Alt+S" },
   ],
 };
 
