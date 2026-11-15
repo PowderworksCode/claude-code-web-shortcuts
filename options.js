@@ -1,6 +1,6 @@
 const api = globalThis.chrome; // chrome.* (callback style) works in both Chrome and Firefox
 const $ = (id) => document.getElementById(id);
-const FIELDS = ["placement", "pathPrefix", "composerSelector", "sendSelector", "anchorSelector", "footerSelector"];
+const FIELDS = ["prLookback", "pathPrefix", "composerSelector", "sendSelector", "anchorSelector", "footerSelector"];
 let buttons = [];
 
 const ICONS = {
@@ -23,6 +23,7 @@ function queueSave() {
 function save() {
   const values = Object.fromEntries(FIELDS.map((f) => [f, $(f).value.trim()]));
   values.pathPrefix ||= "/";
+  values.prLookback = Math.min(200, Math.max(1, parseInt(values.prLookback, 10) || 10));
   api.storage.sync.set(
     {
       ...values,

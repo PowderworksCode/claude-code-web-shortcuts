@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **"open all pr's" button** above the message box. It collects the GitHub pull request links in the last 10 messages, removes duplicates, and opens each in a new background tab next to the current one. The number of messages is a setting.
+
+### Removed
+
+- **Position setting.** The quick-reply buttons always sit below the message box.
+
 ## [0.0.1] - 2026-11-13
 
 First release.
@@ -36,4 +46,5 @@ First release.
 - **Browsers:** Chrome and Firefox (140+) from one MV3 manifest. Declares no data collection.
 - **Docs:** MIT license and privacy policy.
 
+[Unreleased]: https://github.com/PowderworksCode/claude-code-web-shortcuts/compare/v0.0.1...HEAD
 [0.0.1]: https://github.com/PowderworksCode/claude-code-web-shortcuts/releases/tag/v0.0.1

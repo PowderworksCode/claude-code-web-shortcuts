@@ -87,7 +87,7 @@
     return null;
   }
 
-  // What the bar goes above in "above" mode (or as a fallback).
+  // What the "Open PRs" button goes above.
   function findAnchor(composer, card) {
     const sel = settings.anchorSelector?.trim();
     const custom = sel && document.querySelector(sel);
@@ -167,6 +167,110 @@
     const cb = card.getBoundingClientRect();
     const fb = footer.getBoundingClientRect();
     return fb.height > 0 && fb.top >= cb.bottom - 4 && fb.top < cb.bottom + 80;
+  }
+
+  // ---------- GitHub PR links in recent messages ----------
+
+  // claude.ai writes PR chips as .../issues/N links; GitHub redirects those to
+  // the PR, so both forms count. The same number under either is one item.
+  const PR_RE = /https?:\/\/(?:www\.)?github\.com\/([\w.-]+)\/([\w.-]+)\/(pull|issues)\/(\d+)/gi;
+
+  const scrollable = (el) => {
+    const oy = getComputedStyle(el).overflowY;
+    return (oy === "auto" || oy === "scroll") && el.scrollHeight > el.clientHeight + 4;
+  };
+
+  // The scrolling transcript that belongs to this input: the biggest
+  // scrollable box above it that overlaps it horizontally, searched from the
+  // input outward so a project's side panel finds its own conversation.
+  function findTranscript(composer) {
+    const cr = composer.getBoundingClientRect();
+    for (let n = composer.parentElement; n && n !== document.documentElement; n = n.parentElement) {
+      let best = null;
+      for (const el of n.querySelectorAll("*")) {
+        if (isOurs(el) || el.contains(composer) || !scrollable(el)) continue;
+        const r = el.getBoundingClientRect();
+        if (r.top >= cr.top || r.right <= cr.left || r.left >= cr.right) continue;
+        if (!best || r.height * r.width > best.area) best = { el, area: r.height * r.width };
+      }
+      if (best) return best.el;
+    }
+    return null;
+  }
+
+  // The element whose children are the individual messages: step down
+  // through wrappers while one child holds nearly all of the content.
+  function findMessageList(scroller) {
+    let el = scroller;
+    for (let i = 0; i < 12; i++) {
+      const kids = [...el.children].filter(
+        (k) => !isOurs(k) && k.getAttribute("aria-hidden") !== "true" && k.getBoundingClientRect().height > 0
+      );
+      if (!kids.length) break;
+      const total = el.scrollHeight || el.getBoundingClientRect().height;
+      const big = kids.find((k) => k.scrollHeight >= total * 0.9);
+      if (kids.length > 1 && !big) break;
+      el = big || kids[0];
+    }
+    return el;
+  }
+
+  // The last `lookback` messages of this input's conversation. claude.ai
+  // marks each one as data-testid="transcript-row" (rendered virtually, with
+  // spacer divs standing in for off-screen rows); the structural guess is
+  // only a fallback in case that attribute goes away.
+  function recentMessages(composer, lookback) {
+    const scroller = findTranscript(composer);
+    for (const scope of [scroller, document].filter(Boolean)) {
+      const rows = [...scope.querySelectorAll('[data-testid="transcript-row"]')];
+      if (!rows.length) continue;
+      const idx = (r) => Number(r.dataset.index ?? r.dataset.rsIndex);
+      if (rows.every((r) => Number.isFinite(idx(r)))) rows.sort((x, y) => idx(x) - idx(y));
+      return rows.slice(-lookback);
+    }
+    if (!scroller) return [document.body];
+    const list = findMessageList(scroller);
+    const kids = [...list.children].filter(
+      (k) => !isOurs(k) && k.getAttribute("aria-hidden") !== "true" && k.textContent.trim()
+    );
+    return kids.length > 1 ? kids.slice(-lookback) : [list];
+  }
+
+  // Canonical PR URLs, newest messages only, deduped, in reading order.
+  function recentPrLinks(composer, lookback) {
+    const messages = recentMessages(composer, lookback);
+    const seen = new Set();
+    const urls = [];
+    const add = (raw) => {
+      for (const m of raw.matchAll(PR_RE)) {
+        const url = `https://github.com/${m[1]}/${m[2]}/${m[3].toLowerCase()}/${m[4]}`;
+        const key = `${m[1]}/${m[2]}#${m[4]}`.toLowerCase();
+        if (!seen.has(key)) {
+          seen.add(key);
+          urls.push(url);
+        }
+      }
+    };
+    for (const msg of messages) {
+      // Links, plus any attribute that carries a URL (data-href, title, ...),
+      // since PR chips aren't always plain <a> tags.
+      for (const el of msg.querySelectorAll("*")) {
+        if (isOurs(el)) continue;
+        if (el.href) add(String(el.href));
+        for (const at of el.attributes) if (at.value.includes("github.com")) add(at.value);
+      }
+      add(msg.innerText || msg.textContent || "");
+    }
+    console.debug("[claude-code-web-shortcuts] open PRs", { messages, urls });
+    return urls;
+  }
+
+  function openPrs(bar) {
+    const lookback = Math.max(1, parseInt(settings.prLookback, 10) || 10);
+    const urls = recentPrLinks(bar.composer, lookback);
+    if (!urls.length) return bar.flashTop(`No PR links in the last ${lookback} messages`);
+    api.runtime.sendMessage({ type: "ccws-open-tabs", urls });
+    bar.flashTop(`Opened ${urls.length} PR${urls.length === 1 ? "" : "s"}`);
   }
 
   // ---------- theme (match the page, not the OS) ----------
@@ -278,9 +382,14 @@
     :host(.compact) .bar { gap: 4px; }
     :host(.compact) button:not(.gear) { padding-left: 9px; padding-right: 9px; }
     :host(.row) { margin: 8px 0 0; }
+    :host(.top) { margin: 0 0 12px; }
+    :host(.top) .toast { position: static; margin-left: 4px; }
+    .pr svg { width: 14px; height: 14px; display: block; }
   `;
 
   const GEAR_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`;
+
+  const PR_SVG = `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 3.25a2.25 2.25 0 1 1 3 2.122v5.256a2.251 2.251 0 1 1-1.5 0V5.372A2.25 2.25 0 0 1 1.5 3.25Zm5.677-.177L9.573.677A.25.25 0 0 1 10 .854V2.5h1A2.5 2.5 0 0 1 13.5 5v5.628a2.251 2.251 0 1 1-1.5 0V5a1 1 0 0 0-1-1h-1v1.646a.25.25 0 0 1-.427.177L7.177 3.427a.25.25 0 0 1 0-.354ZM3.75 2.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm0 9.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm8.25.75a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0Z"/></svg>`;
 
   const prettyShortcut = (s) =>
     ccwsNormalizeShortcut(s)
@@ -301,6 +410,23 @@
       const root = this.host.attachShadow({ mode: "open" });
       root.innerHTML = `<style>${STYLE}</style><div class="bar"></div>`;
       this.render();
+
+      // "Open PRs" lives in its own small bar above the input box.
+      this.top = document.createElement("div");
+      this.top.setAttribute(HOST_ATTR, "");
+      this.top.className = "top";
+      const troot = this.top.attachShadow({ mode: "open" });
+      troot.innerHTML = `<style>${STYLE}</style><div class="bar"></div>`;
+      const pr = document.createElement("button");
+      pr.type = "button";
+      pr.className = "pr";
+      pr.innerHTML = PR_SVG;
+      pr.append("open all pr's");
+      pr.addEventListener("mousedown", (e) => e.preventDefault());
+      pr.addEventListener("click", () => openPrs(this));
+      const ttoast = document.createElement("span");
+      ttoast.className = "toast";
+      troot.querySelector(".bar").append(pr, ttoast);
     }
 
     render() {
@@ -336,6 +462,13 @@
       this.toastTimer = setTimeout(() => (t.textContent = ""), 2000);
     }
 
+    flashTop(msg) {
+      const t = this.top.shadowRoot.querySelector(".toast");
+      t.textContent = msg;
+      clearTimeout(this.topTimer);
+      this.topTimer = setTimeout(() => (t.textContent = ""), 3000);
+    }
+
     // Width the buttons need on one line (independent of where we are).
     // Widths the bar needs on one line, in normal and compact spacing.
     // Derived from the current layout either way, so measuring never needs
@@ -353,14 +486,21 @@
     }
 
     adoptPageStyle(card) {
-      const h = this.host;
-      const set = (k, v) => v && h.style.getPropertyValue(k) !== v && h.style.setProperty(k, v);
+      const set = (k, v) => {
+        for (const h of [this.host, this.top]) if (v && h.style.getPropertyValue(k) !== v) h.style.setProperty(k, v);
+      };
       const ccs = getComputedStyle(this.composer);
       set("--font", ccs.fontFamily);
       set("--fg", ccs.color);
       if (card) {
         const kcs = getComputedStyle(card);
-        if (parseFloat(kcs.borderTopWidth) > 0 && alpha(kcs.borderTopColor) > 0) set("--b", kcs.borderTopColor);
+        // Borrow the box's border only when it's a plain, visible rgb color;
+        // a faint or oklch/color() border (the new-session box) made the
+        // pills look borderless, so fall back to our own outline instead.
+        const bc = kcs.borderTopColor;
+        const usable = parseFloat(kcs.borderTopWidth) > 0 && /^rgba?\(/.test(bc) && alpha(bc) >= 0.08;
+        if (usable) set("--b", bc);
+        else for (const h of [this.host, this.top]) h.style.removeProperty("--b");
         if (alpha(kcs.backgroundColor) > 0) set("--bgh", kcs.backgroundColor);
       }
     }
@@ -372,24 +512,26 @@
       const card = findCard(this.composer);
       const anchor = findAnchor(this.composer, card);
       const theme = pageIsDark(anchor.parentElement || document.body) ? "dark" : "light";
-      if (h.dataset.theme !== theme) h.dataset.theme = theme;
+      for (const el of [h, this.top]) if (el.dataset.theme !== theme) el.dataset.theme = theme;
       this.adoptPageStyle(card);
 
-      let footer = null;
-      if (settings.placement !== "above") {
-        footer = footerStillValid(this.footer, card) ? this.footer : findFooter(card);
-      }
+      // "Open PRs" goes above the input box and anything attached on top of it.
+      const top = extendOverAttached(anchor);
+      if (top.parentElement && this.top.nextElementSibling !== top) top.parentElement.insertBefore(this.top, top);
+
+      const footer = footerStillValid(this.footer, card) ? this.footer : findFooter(card);
       if (footer !== this.footer) {
         console.debug("[claude-code-web-shortcuts] row below input:", footer, "card:", card);
         this.footer = footer;
       }
 
+      // No row under the box: sit on our own line just below it.
       if (!footer) {
         setClass(h, "inline", false);
-        setClass(h, "row", false);
+        setClass(h, "row", true);
         h.style.marginLeft = "";
-        const top = extendOverAttached(anchor);
-        if (top.parentElement && h.nextElementSibling !== top) top.parentElement.insertBefore(h, top);
+        const below = card || anchor;
+        if (below.parentElement && h.previousElementSibling !== below) below.parentElement.insertBefore(h, below.nextSibling);
         return;
       }
 
@@ -445,6 +587,7 @@
 
     remove() {
       this.host.remove();
+      this.top.remove();
     }
   }
 
