@@ -8,6 +8,8 @@ The buttons sit under the message box, on the same line as the model picker:
 
 Clicking a button, or pressing its keychord, replaces whatever is in the message box with that button's message and sends it immediately. The buttons pick up the page's font and colors, so they match light and dark mode.
 
+Above the message box, **open all pr's** finds every GitHub pull request linked in the last 10 messages, drops duplicates, and opens each one in a new background tab.
+
 ## Defaults
 
 | Button | Sends | Shortcut |
@@ -36,9 +38,9 @@ Open settings with the ⚙ at the start of the button row, or the extension's to
 - **Buttons:** add, remove, reorder and edit buttons (label, message, shortcut).
 - **Shortcuts:** click a shortcut to record a new one. Two steps make a chord: `Ctrl+K Y` means press Ctrl+K, then Y within 1.5s. Esc cancels; Backspace clears. A shortcut used by two buttons is outlined in red.
 - **Send immediately:** turn this off and buttons only fill in the message box.
-- **Position:** "Below, beside the model picker" (default) or "Above the message box".
+- **"open all pr's" looks back:** how many recent messages to search for PR links (default 10).
 - **Active on paths starting with:** defaults to `/code`.
-- **Advanced:** CSS selector overrides for the message box, the send button, the row below the box, and the element to sit above. Use these if a claude.ai redesign breaks auto-detection.
+- **Advanced:** CSS selector overrides for the message box, the send button, the row below the box, and the element "open all pr's" sits above. Use these if a claude.ai redesign breaks auto-detection.
 
 Changes save automatically to `storage.sync`, so they follow your browser profile.
 

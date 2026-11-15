@@ -6,7 +6,7 @@
 
 var CCWS_DEFAULTS = {
   autoSubmit: true,
-  placement: "below",
+  prLookback: 10,
   footerSelector: "",
   pathPrefix: "/code",
   composerSelector: "",
