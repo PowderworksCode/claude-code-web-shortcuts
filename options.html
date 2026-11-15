@@ -24,6 +24,7 @@
     header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
       padding-bottom: 12px; margin-bottom: 24px; border-bottom: 1px solid var(--line); }
     h1 { font-size: 18px; font-weight: 600; margin: 0; }
+    .version { font-size: 12px; font-weight: 400; color: var(--fg2); margin-left: 6px; }
     .lede { color: var(--fg2); margin: 4px 0 0; }
     .gh { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); text-decoration: none; white-space: nowrap; }
     .links { display: flex; gap: 16px; }
@@ -100,7 +101,7 @@
 <main>
   <header>
     <div>
-      <h1>Claude Code Web Shortcuts</h1>
+      <h1>Claude Code Web Shortcuts <span class="version" id="version"></span></h1>
       <p class="lede">Quick replies above the Claude Code composer. Click one, or press its shortcut, to replace what's in the box and send it.</p>
     </div>
     <div class="links">

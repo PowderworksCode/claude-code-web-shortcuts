@@ -210,4 +210,5 @@ $("reset").onclick = () => {
 $("autoSubmit").onchange = queueSave;
 for (const f of FIELDS) $(f).oninput = $(f).onchange = queueSave;
 
+$("version").textContent = `v${api.runtime.getManifest().version}`;
 ccwsLoadSettings(api.storage).then(fill);
