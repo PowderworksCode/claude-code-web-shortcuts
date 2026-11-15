@@ -102,6 +102,30 @@
     return node;
   }
 
+  // Things attached on top of the input box (e.g. the branch / "Create PR"
+  // strip) belong with it, so "above" means above all of them, not wedged in
+  // between. A previous sibling counts as attached when it sits flush on top
+  // and is about as wide.
+  function extendOverAttached(anchor) {
+    for (;;) {
+      let prev = anchor.previousElementSibling;
+      let ours = 0; // height of our own bar if it's currently wedged in between
+      while (prev && isOurs(prev)) {
+        const cs = getComputedStyle(prev);
+        ours += prev.getBoundingClientRect().height + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom);
+        prev = prev.previousElementSibling;
+      }
+      if (!prev) return anchor;
+      const a = anchor.getBoundingClientRect();
+      const p = prev.getBoundingClientRect();
+      const gap = a.top - p.bottom - ours;
+      const flush = p.height > 0 && gap >= -2 && gap <= 20;
+      const sameWidth = Math.abs(p.width - a.width) <= a.width * 0.1;
+      if (!flush || !sameWidth) return anchor;
+      anchor = prev;
+    }
+  }
+
   // The row under the input box (model picker, mode, etc.). Found
   // geometrically: probe just below the card's right side, then walk up to
   // the first ancestor that spans most of the card's width without
@@ -229,7 +253,7 @@
   // Colors/font are borrowed from the page at runtime (see Bar.adoptPageStyle);
   // the values here are only fallbacks.
   const STYLE = `
-    :host { all: initial; display: block; margin: 0 0 12px; padding: 0; opacity: 1 !important;
+    :host { all: initial; display: block; margin: 8px 0 10px; padding: 0; opacity: 1 !important;
       --fg: #29261b; --fg2: #73726c; --bgh: #ffffff; --b: rgba(0,0,0,.15);
       --font: ui-sans-serif, system-ui, -apple-system, sans-serif; }
     :host([data-theme=dark]) { --fg: #f5f4ee; --fg2: #a6a39a; --bgh: #30302e; --b: rgba(255,255,255,.12); }
@@ -244,9 +268,13 @@
     button:focus-visible { outline: 2px solid var(--fg2); outline-offset: 1px; }
     .gear { padding: 5px; border-color: transparent; }
     .gear svg { width: 20px; height: 20px; display: block; }
-    .toast { font-size: 12px; color: var(--fg2); margin-left: 4px; white-space: nowrap; }
+    .bar { position: relative; }
+    .toast { position: absolute; left: 0; bottom: calc(100% + 4px); pointer-events: none;
+      font-size: 12px; color: var(--fg2); white-space: nowrap; }
+    .toast:empty { display: none; }
     :host(.inline) { margin: 0 auto 0 8px; align-self: center; flex: none; }
     :host(.inline.first) { margin-left: 0; }
+    :host(.inline) .bar { flex-wrap: nowrap; }
     :host(.row) { margin: 8px 0 0; }
   `;
 
@@ -349,7 +377,9 @@
       if (!footer) {
         setClass(h, "inline", false);
         setClass(h, "row", false);
-        if (anchor.parentElement && h.nextElementSibling !== anchor) anchor.parentElement.insertBefore(h, anchor);
+        h.style.marginLeft = "";
+        const top = extendOverAttached(anchor);
+        if (top.parentElement && h.nextElementSibling !== top) top.parentElement.insertBefore(h, top);
         return;
       }
 
@@ -357,22 +387,34 @@
       // otherwise on their own line right under it. Both measurements ignore
       // our own host, so the decision is stable and doesn't oscillate.
       if (!h.isConnected) footer.parentElement.insertBefore(h, footer.nextSibling);
-      const fits = this.naturalWidth() + 16 <= freeSpace(footer);
-      if (fits) {
-        // Sit after the page's left-side controls (e.g. + and mic) and before
-        // the right-side ones (model picker), pushing the latter right.
-        const fb = footer.getBoundingClientRect();
+      // Three layouts, picked from measurements that ignore our own bar, so
+      // the choice is stable:
+      //  1. fits: inline, after the left-side controls (e.g. + and mic) and
+      //     before the right-side ones (model picker), pushing those right.
+      //  2. doesn't fit but there's empty page to the left: inline as the
+      //     row's first item, extending left past the input box's edge.
+      //  3. neither: on its own line under the row.
+      const overshoot = this.naturalWidth() + 16 - freeSpace(footer);
+      const fb = footer.getBoundingClientRect();
+      const others = [...footer.children].filter((k) => k !== h && !isOurs(k));
+      const margin = (px) => {
+        const v = px ? `${px}px` : "";
+        if (h.style.marginLeft !== v) h.style.marginLeft = v;
+      };
+      if (overshoot <= 0 || overshoot <= fb.left - 8) {
         const mid = fb.left + fb.width / 2;
-        const others = [...footer.children].filter((k) => k !== h && !isOurs(k));
-        const ref = others.find((k) => k.getBoundingClientRect().left >= mid) || null;
+        const ref =
+          overshoot <= 0 ? others.find((k) => k.getBoundingClientRect().left >= mid) || null : others[0] || null;
         setClass(h, "row", false);
         setClass(h, "inline", true);
         setClass(h, "first", ref === others[0]);
+        margin(overshoot > 0 ? -Math.ceil(overshoot) : 0);
         if (h.parentElement !== footer || h.nextElementSibling !== ref) footer.insertBefore(h, ref);
       } else {
         setClass(h, "inline", false);
         setClass(h, "first", false);
         setClass(h, "row", true);
+        margin(0);
         if (h.previousElementSibling !== footer) footer.parentElement.insertBefore(h, footer.nextSibling);
       }
     }
